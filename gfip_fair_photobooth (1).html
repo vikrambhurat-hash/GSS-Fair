@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GFI&P Fair 2026 — Photo Booth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+
+<style>
+/* ══════════════════════════════════════════════════════
+   GFI&P FAIR 2026 — DIGITAL PHOTO BOOTH
+   ══════════════════════════════════════════════════════
+
+   HOW TO ADD YOUR ADP LOGO:
+   ─────────────────────────────────────────────────────
+   1. Save the official ADP logo image (PNG with
+      transparent background works best) in the SAME
+      FOLDER as this HTML file
+   2. Rename it to: adp_logo.png
+   3. That's it — it will automatically appear in the
+      top banner of the frame
+
+   If you don't add a logo file, the booth still works
+   fine — it just shows text only.
+
+   HOW TO CHANGE TEXT / COLORS:
+   ─────────────────────────────────────────────────────
+   Search for "EDIT:" comments below.
+   ══════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --brand-red: #A32D2D;
+  --brand-red-dark: #791F1F;
+  --brand-navy: #042C53;
+  --brand-navy-light: #0C447C;
+  --bg: #15151c;
+  --surface: #1f1f29;
+  --text: #f5f5f7;
+  --muted: #9999a8;
+  --dim: #5c5c6b;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 48px;
+}
+
+/* ── HEADER ── */
+.page-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.main-title {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+}
+.main-title span { color: var(--brand-red); }
+.subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* ── BOOTH STAGE ── */
+.booth-stage {
+  position: relative;
+  width: min(360px, 92vw);
+  aspect-ratio: 9/16;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+#video, #photoCanvas, #capturedImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+#video.hidden, #capturedImg.hidden { display: none; }
+
+/* mirror the live camera so it feels like a mirror */
+#video.mirror { transform: scaleX(-1); }
+
+/* ── FRAME OVERLAY (always visible) ── */
+.frame-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.frame-border {
+  position: absolute;
+  inset: 0;
+  border: 5px solid var(--brand-red);
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+.frame-top {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 64px;
+  background: linear-gradient(90deg, var(--brand-red) 0%, var(--brand-red-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 12px;
+}
+.frame-top-logo {
+  height: 28px;
+  max-width: 70px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.frame-top-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+}
+.frame-top-title {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+.frame-top-sub {
+  color: #F09595;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.frame-bottom {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 64px;
+  background: var(--brand-navy);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.frame-bottom-main {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+.frame-bottom-tag {
+  color: #85B7EB;
+  font-size: 11px;
+}
+
+/* ── COUNTDOWN OVERLAY ── */
+.countdown-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.35);
+}
+.countdown-overlay.show { display: flex; }
+.countdown-num {
+  font-size: 96px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  animation: countPulse 1s ease-in-out;
+}
+@keyframes countPulse {
+  0% { transform: scale(0.6); opacity: 0; }
+  40% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── FLASH EFFECT ── */
+.flash-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+.flash-overlay.flash {
+  animation: flashAnim 0.4s ease-out;
+}
+@keyframes flashAnim {
+  0% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+/* ── PERMISSION / ERROR STATE ── */
+.cam-message {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px;
+  text-align: center;
+  background: var(--surface);
+}
+.cam-message.hidden { display: none; }
+.cam-icon { font-size: 40px; color: var(--muted); }
+.cam-message-text {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.cam-btn {
+  background: var(--brand-red);
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.cam-btn:hover { opacity: 0.9; }
+
+/* ── CONTROLS ── */
+.controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 28px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.action-btn:active { transform: scale(0.97); }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-capture {
+  background: var(--brand-red);
+  color: #fff;
+}
+.btn-capture:hover:not(:disabled) { opacity: 0.9; }
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.08); }
+
+.btn-download {
+  background: var(--brand-navy-light);
+  color: #fff;
+}
+.btn-download:hover:not(:disabled) { opacity: 0.9; }
+
+/* ── QR SECTION ── */
+.qr-section {
+  margin-top: 36px;
+  text-align: center;
+}
+.qr-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 12px;
+}
+#qrcode {
+  display: inline-block;
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+}
+.qr-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 12px;
+  max-width: 300px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+/* ── HIDDEN CANVAS ── */
+.hidden { display: none; }
+
+@media (max-width: 420px) {
+  .main-title { font-size: 22px; }
+  .frame-top-title { font-size: 13px; }
+  .frame-bottom-main { font-size: 12px; }
+  .action-btn { padding: 10px 20px; font-size: 13px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="eyebrow">GFI&amp;P Fair 2026</div>
+  <div class="main-title">Photo <span>Booth</span></div>
+  <div class="subtitle">Smile — your frame is already on!</div>
+</div>
+
+<div class="booth-stage" id="boothStage">
+
+  <video id="video" autoplay playsinline muted class="mirror"></video>
+
+  <img id="capturedImg" class="hidden" alt="Captured photo"/>
+
+  <canvas id="photoCanvas" class="hidden"></canvas>
+
+  <div class="frame-overlay">
+    <div class="frame-top">
+      <img id="logoImg" class="frame-top-logo hidden" alt="ADP logo"/>
+      <div class="frame-top-text">
+        <div class="frame-top-title">GFI&amp;P FAIR 2026</div>
+        <div class="frame-top-sub">VISION 2030 · GSS FINANCE</div>
+      </div>
+    </div>
+    <div class="frame-bottom">
+      <div class="frame-bottom-main">Inside our Office • GSS Finance</div>
+      <div class="frame-bottom-tag">#GFIP_Fair2026</div>
+    </div>
+    <div class="frame-border"></div>
+  </div>
+
+  <div class="countdown-overlay" id="countdownOverlay">
+    <div class="countdown-num" id="countdownNum">3</div>
+  </div>
+
+  <div class="flash-overlay" id="flashOverlay"></div>
+
+  <div class="cam-message" id="camMessage">
+    <i class="ti ti-camera cam-icon" aria-hidden="true"></i>
+    <div class="cam-message-text" id="camMessageText">
+      We need camera access to start the photo booth.
+    </div>
+    <button class="cam-btn" id="enableCamBtn" onclick="startCamera()">
+      <i class="ti ti-camera" aria-hidden="true"></i> Enable Camera
+    </button>
+  </div>
+
+</div>
+
+<div class="controls">
+  <button class="action-btn btn-capture" id="captureBtn" onclick="startCountdown()" disabled>
+    <i class="ti ti-camera" aria-hidden="true"></i> Take Photo
+  </button>
+  <button class="action-btn btn-secondary hidden" id="retakeBtn" onclick="retakePhoto()">
+    <i class="ti ti-refresh" aria-hidden="true"></i> Retake
+  </button>
+  <button class="action-btn btn-download hidden" id="downloadBtn" onclick="downloadPhoto()">
+    <i class="ti ti-download" aria-hidden="true"></i> Download
+  </button>
+  <button class="action-btn btn-secondary hidden" id="switchCamBtn" onclick="switchCamera()">
+    <i class="ti ti-camera-rotate" aria-hidden="true"></i> Switch Camera
+  </button>
+</div>
+
+<div class="qr-section">
+  <div class="qr-label">Scan to open on your phone</div>
+  <div id="qrcode"></div>
+  <div class="qr-hint">
+    Point your phone camera here, open the link, and use this booth
+    directly on your own device with your own selfie camera.
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════
+   CORE LOGIC
+   ══════════════════════════════════════════════════════ */
+
+let currentStream = null;
+let currentFacingMode = 'user';
+let lastCapturedDataUrl = null;
+
+/* ── LOGO LOADING ──
+   Tries to load adp_logo.png from the same folder.
+   If it fails (file doesn't exist), the logo slot
+   simply stays hidden — no error shown to the user. */
+function tryLoadLogo() {
+  const img = document.getElementById('logoImg');
+  img.onload = () => img.classList.remove('hidden');
+  img.onerror = () => img.classList.add('hidden');
+  img.src = 'adp_logo.png'; // EDIT: change filename if your logo has a different name
+}
+
+/* ── CAMERA ── */
+async function startCamera() {
+  const camMessage = document.getElementById('camMessage');
+  const camMessageText = document.getElementById('camMessageText');
+  const video = document.getElementById('video');
+
+  try {
+    if (currentStream) {
+      currentStream.getTracks().forEach(t => t.stop());
+    }
+    const constraints = {
+      video: {
+        facingMode: currentFacingMode,
+        width: { ideal: 1080 },
+        height: { ideal: 1920 }
+      },
+      audio: false
+    };
+    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = currentStream;
+    video.classList.remove('hidden');
+    video.classList.toggle('mirror', currentFacingMode === 'user');
+
+    camMessage.classList.add('hidden');
+    document.getElementById('captureBtn').disabled = false;
+    document.getElementById('switchCamBtn').classList.remove('hidden');
+  } catch (err) {
+    camMessage.classList.remove('hidden');
+    if (err.name === 'NotAllowedError') {
+      camMessageText.textContent = 'Camera access was denied. Please allow camera permission in your browser settings and tap below to try again.';
+    } else if (err.name === 'NotFoundError') {
+      camMessageText.textContent = 'No camera found on this device.';
+    } else {
+      camMessageText.textContent = 'Could not access camera: ' + err.message;
+    }
+  }
+}
+
+async function switchCamera() {
+  currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+  await startCamera();
+}
+
+/* ── COUNTDOWN ── */
+function startCountdown() {
+  const overlay = document.getElementById('countdownOverlay');
+  const num = document.getElementById('countdownNum');
+  let count = 3;
+
+  document.getElementById('captureBtn').disabled = true;
+  overlay.classList.add('show');
+  num.textContent = count;
+  num.style.animation = 'none';
+  requestAnimationFrame(() => { num.style.animation = 'countPulse 1s ease-in-out'; });
+
+  const interval = setInterval(() => {
+    count--;
+    if (count > 0) {
+      num.textContent = count;
+      num.style.animation = 'none';
+      requestAnimationFrame(() => { num.style.animation = 'countPulse 1s ease-in-out'; });
+    } else {
+      clearInterval(interval);
+      overlay.classList.remove('show');
+      capturePhoto();
+    }
+  }, 1000);
+}
+
+/* ── CAPTURE ── */
+function capturePhoto() {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('photoCanvas');
+  const capturedImg = document.getElementById('capturedImg');
+  const flash = document.getElementById('flashOverlay');
+
+  const W = video.videoWidth;
+  const H = video.videoHeight;
+  canvas.width = W;
+  canvas.height = H;
+
+  const ctx = canvas.getContext('2d');
+
+  if (currentFacingMode === 'user') {
+    ctx.translate(W, 0);
+    ctx.scale(-1, 1);
+  }
+  ctx.drawImage(video, 0, 0, W, H);
+
+  drawFrameOnCanvas(ctx, W, H);
+
+  lastCapturedDataUrl = canvas.toDataURL('image/png');
+  capturedImg.src = lastCapturedDataUrl;
+  capturedImg.classList.remove('hidden');
+  video.classList.add('hidden');
+
+  flash.classList.remove('flash');
+  requestAnimationFrame(() => flash.classList.add('flash'));
+
+  document.getElementById('captureBtn').classList.add('hidden');
+  document.getElementById('switchCamBtn').classList.add('hidden');
+  document.getElementById('retakeBtn').classList.remove('hidden');
+  document.getElementById('downloadBtn').classList.remove('hidden');
+}
+
+/* ── DRAW FRAME ONTO CANVAS (baked into final image) ── */
+function drawFrameOnCanvas(ctx, W, H) {
+  const borderWidth = Math.round(W * 0.018);
+  const topH = Math.round(H * 0.085);
+  const bottomH = Math.round(H * 0.085);
+
+  ctx.strokeStyle = '#A32D2D';
+  ctx.lineWidth = borderWidth;
+  ctx.strokeRect(borderWidth/2, borderWidth/2, W - borderWidth, H - borderWidth);
+
+  const topGrad = ctx.createLinearGradient(0, 0, W, 0);
+  topGrad.addColorStop(0, '#A32D2D');
+  topGrad.addColorStop(1, '#791F1F');
+  ctx.fillStyle = topGrad;
+  ctx.fillRect(0, 0, W, topH);
+
+  ctx.fillStyle = '#042C53';
+  ctx.fillRect(0, H - bottomH, W, bottomH);
+
+  const logoImg = document.getElementById('logoImg');
+  const hasLogo = !logoImg.classList.contains('hidden') && logoImg.complete && logoImg.naturalWidth > 0;
+
+  let textCenterX = W / 2;
+  if (hasLogo) {
+    const logoH = topH * 0.42;
+    const logoW = logoH * (logoImg.naturalWidth / logoImg.naturalHeight);
+    const logoX = W * 0.06;
+    const logoY = (topH - logoH) / 2;
+    ctx.drawImage(logoImg, logoX, logoY, logoW, logoH);
+    textCenterX = W / 2 + logoW / 2;
+  }
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `600 ${Math.round(W * 0.052)}px Inter, sans-serif`;
+  ctx.fillText('GFI&P FAIR 2026', textCenterX, topH * 0.45);
+
+  ctx.fillStyle = '#F09595';
+  ctx.font = `400 ${Math.round(W * 0.032)}px Inter, sans-serif`;
+  ctx.fillText('VISION 2030 · GSS FINANCE', textCenterX, topH * 0.78);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `600 ${Math.round(W * 0.048)}px Inter, sans-serif`;
+  ctx.fillText('Inside our Office • GSS Finance', W / 2, H - bottomH * 0.55);
+
+  ctx.fillStyle = '#85B7EB';
+  ctx.font = `400 ${Math.round(W * 0.034)}px Inter, sans-serif`;
+  ctx.fillText('#GFIP_Fair2026', W / 2, H - bottomH * 0.2);
+}
+
+/* ── RETAKE ── */
+function retakePhoto() {
+  document.getElementById('capturedImg').classList.add('hidden');
+  document.getElementById('video').classList.remove('hidden');
+  document.getElementById('captureBtn').classList.remove('hidden');
+  document.getElementById('captureBtn').disabled = false;
+  document.getElementById('switchCamBtn').classList.remove('hidden');
+  document.getElementById('retakeBtn').classList.add('hidden');
+  document.getElementById('downloadBtn').classList.add('hidden');
+}
+
+/* ── DOWNLOAD ── */
+function downloadPhoto() {
+  if (!lastCapturedDataUrl) return;
+  const link = document.createElement('a');
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  link.download = `GFIP_Fair2026_${timestamp}.png`;
+  link.href = lastCapturedDataUrl;
+  link.click();
+}
+
+/* ── QR CODE ──
+   Generates a QR code pointing to the current page URL,
+   so people can scan and open this booth on their own phone. */
+function generateQR() {
+  const url = window.location.href;
+  new QRCode(document.getElementById('qrcode'), {
+    text: url,
+    width: 140,
+    height: 140,
+    colorDark: '#15151c',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+}
+
+/* ── INIT ── */
+tryLoadLogo();
+generateQR();
+startCamera();
+</script>
+</body>
+</html>

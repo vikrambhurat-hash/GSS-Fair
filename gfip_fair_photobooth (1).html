@@ -550,14 +550,21 @@ function capturePhoto() {
 
   const ctx = canvas.getContext('2d');
 
-  // On this device, the raw video frame from drawImage() comes out
-  // vertically flipped (upside-down) relative to the live preview,
-  // while left-right orientation is already correct. Correct with
-  // a vertical-only flip (flip Y axis, keep X axis as-is).
+  // ── DEBUG MODE ──
+  // If ?debug=1 is in the URL, show all 4 orientation variants
+  // side by side so we can identify the correct one definitively.
+  if (window.location.search.includes('debug=1')) {
+    showOrientationDebug(video, W, H);
+    return;
+  }
+
+  // Draw video frame, isolating any transform with save/restore
+  // so it cannot leak into the frame overlay drawing below.
+  ctx.save();
   ctx.translate(0, H);
   ctx.scale(1, -1);
   ctx.drawImage(video, 0, 0, W, H);
-  ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform before drawing frame overlay
+  ctx.restore();
 
   drawFrameOnCanvas(ctx, W, H);
 
@@ -573,6 +580,41 @@ function capturePhoto() {
   document.getElementById('switchCamBtn').classList.add('hidden');
   document.getElementById('retakeBtn').classList.remove('hidden');
   document.getElementById('downloadBtn').classList.remove('hidden');
+}
+
+/* ── DEBUG: show 4 orientation variants ── */
+function showOrientationDebug(video, W, H) {
+  const variants = [
+    { label: 'A: No transform', transform: (ctx) => {} },
+    { label: 'B: Flip X (mirror)', transform: (ctx) => { ctx.translate(W, 0); ctx.scale(-1, 1); } },
+    { label: 'C: Flip Y (upside-down fix)', transform: (ctx) => { ctx.translate(0, H); ctx.scale(1, -1); } },
+    { label: 'D: Rotate 180 (flip X+Y)', transform: (ctx) => { ctx.translate(W, H); ctx.rotate(Math.PI); } },
+  ];
+
+  const container = document.getElementById('boothStage');
+  container.innerHTML = `
+    <div style="position:absolute;inset:0;overflow-y:auto;background:#000;padding:12px;display:flex;flex-direction:column;gap:16px;z-index:100;">
+      <div style="color:#fff;font-size:14px;font-weight:600;text-align:center;">Tap the image that looks CORRECT (right-side up, not mirrored, text readable)</div>
+      ${variants.map((v, i) => `
+        <div style="text-align:center;">
+          <div style="color:#fff;font-size:12px;margin-bottom:6px;">${v.label}</div>
+          <canvas id="debugCanvas${i}" style="width:100%;max-width:240px;border:2px solid #444;border-radius:8px;cursor:pointer;" onclick="alert('You picked: ${v.label}')"></canvas>
+        </div>
+      `).join('')}
+      <button onclick="location.reload()" style="background:#A32D2D;color:#fff;border:none;border-radius:24px;padding:12px;font-size:14px;font-weight:600;">Back to Camera</button>
+    </div>
+  `;
+
+  variants.forEach((v, i) => {
+    const c = document.getElementById('debugCanvas' + i);
+    c.width = W;
+    c.height = H;
+    const cctx = c.getContext('2d');
+    cctx.save();
+    v.transform(cctx);
+    cctx.drawImage(video, 0, 0, W, H);
+    cctx.restore();
+  });
 }
 
 /* ── DRAW FRAME ONTO CANVAS (baked into final image) ── */
@@ -628,9 +670,11 @@ function drawFrameOnCanvas(ctx, W, H) {
 /* ── RETAKE ── */
 function retakePhoto() {
   const capturedImg = document.getElementById('capturedImg');
+  const video = document.getElementById('video');
   capturedImg.src = '';
   capturedImg.classList.add('hidden');
-  document.getElementById('video').classList.remove('hidden');
+  video.classList.remove('hidden');
+  video.play().catch(()=>{});
   document.getElementById('captureBtn').classList.remove('hidden');
   document.getElementById('captureBtn').disabled = false;
   document.getElementById('switchCamBtn').classList.remove('hidden');

@@ -550,10 +550,10 @@ function capturePhoto() {
 
   const ctx = canvas.getContext('2d');
 
-  if (currentFacingMode === 'user') {
-    ctx.translate(W, 0);
-    ctx.scale(-1, 1);
-  }
+  // Note: we do NOT mirror-flip here. The live preview is mirrored
+  // via CSS purely so it feels natural to the user (like a mirror),
+  // but the actual saved/downloaded photo should match reality
+  // (text readable correctly, not reversed).
   ctx.drawImage(video, 0, 0, W, H);
 
   drawFrameOnCanvas(ctx, W, H);

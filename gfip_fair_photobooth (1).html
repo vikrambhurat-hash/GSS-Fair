@@ -550,16 +550,14 @@ function capturePhoto() {
 
   const ctx = canvas.getContext('2d');
 
-  // iOS front-camera streams can be reported to <canvas> rotated 180°
-  // relative to how <video> displays them (sensor orientation quirk).
-  // Apply a full 180° rotation correction for the front camera so the
-  // saved image matches what the user sees in the live preview
-  // (right-side up, and not mirrored).
-  if (currentFacingMode === 'user') {
-    ctx.translate(W, H);
-    ctx.rotate(Math.PI);
-  }
+  // On this device, the raw video frame from drawImage() comes out
+  // vertically flipped (upside-down) relative to the live preview,
+  // while left-right orientation is already correct. Correct with
+  // a vertical-only flip (flip Y axis, keep X axis as-is).
+  ctx.translate(0, H);
+  ctx.scale(1, -1);
   ctx.drawImage(video, 0, 0, W, H);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform before drawing frame overlay
 
   drawFrameOnCanvas(ctx, W, H);
 
@@ -629,13 +627,21 @@ function drawFrameOnCanvas(ctx, W, H) {
 
 /* ── RETAKE ── */
 function retakePhoto() {
-  document.getElementById('capturedImg').classList.add('hidden');
+  const capturedImg = document.getElementById('capturedImg');
+  capturedImg.src = '';
+  capturedImg.classList.add('hidden');
   document.getElementById('video').classList.remove('hidden');
   document.getElementById('captureBtn').classList.remove('hidden');
   document.getElementById('captureBtn').disabled = false;
   document.getElementById('switchCamBtn').classList.remove('hidden');
   document.getElementById('retakeBtn').classList.add('hidden');
   document.getElementById('downloadBtn').classList.add('hidden');
+  lastCapturedDataUrl = null;
+
+  // Clear the canvas so no stale image data lingers
+  const canvas = document.getElementById('photoCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 /* ── DOWNLOAD ── */

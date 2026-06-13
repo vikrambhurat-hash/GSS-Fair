@@ -551,18 +551,15 @@ function capturePhoto() {
   const ctx = canvas.getContext('2d');
 
   // ── DEBUG MODE ──
-  // If ?debug=1 is in the URL, show all 4 orientation variants
-  // side by side so we can identify the correct one definitively.
   if (window.location.search.includes('debug=1')) {
     showOrientationDebug(video, W, H);
     return;
   }
 
-  // Draw video frame, isolating any transform with save/restore
-  // so it cannot leak into the frame overlay drawing below.
+  // Confirmed correct via on-device testing: Flip X (mirror).
   ctx.save();
-  ctx.translate(0, H);
-  ctx.scale(1, -1);
+  ctx.translate(W, 0);
+  ctx.scale(-1, 1);
   ctx.drawImage(video, 0, 0, W, H);
   ctx.restore();
 

@@ -375,11 +375,14 @@ body {
   <div class="cam-message" id="camMessage">
     <i class="ti ti-camera cam-icon" aria-hidden="true"></i>
     <div class="cam-message-text" id="camMessageText">
-      We need camera access to start the photo booth.
+      Tap below and allow camera access to start the photo booth.
     </div>
     <button class="cam-btn" id="enableCamBtn" onclick="startCamera()">
       <i class="ti ti-camera" aria-hidden="true"></i> Enable Camera
     </button>
+    <div class="cam-message-text" id="iosHint" style="display:none; font-size:11px; color:var(--dim); margin-top:-4px;">
+      Tip: On iPhone, Safari gives the most reliable camera access. If Chrome doesn't work, try opening this link in Safari.
+    </div>
   </div>
 
 </div>
@@ -435,6 +438,13 @@ async function startCamera() {
   const camMessageText = document.getElementById('camMessageText');
   const video = document.getElementById('video');
 
+  // Guard: getUserMedia API not available at all
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    camMessage.classList.remove('hidden');
+    camMessageText.textContent = 'Camera access is not available. Please make sure this page is opened via https:// (not file://), and try using Safari if Chrome does not work.';
+    return;
+  }
+
   try {
     if (currentStream) {
       currentStream.getTracks().forEach(t => t.stop());
@@ -471,6 +481,7 @@ async function startCamera() {
     video.srcObject = currentStream;
     video.setAttribute('playsinline', ''); // iOS inline playback
     video.setAttribute('webkit-playsinline', '');
+    video.muted = true;
     await video.play().catch(()=>{});
     video.classList.remove('hidden');
     video.classList.toggle('mirror', currentFacingMode === 'user');
@@ -480,14 +491,16 @@ async function startCamera() {
     document.getElementById('switchCamBtn').classList.remove('hidden');
   } catch (err) {
     camMessage.classList.remove('hidden');
-    if (err.name === 'NotAllowedError') {
-      camMessageText.textContent = 'Camera access was denied. Please allow camera permission in your browser settings and tap below to try again.';
-    } else if (err.name === 'NotFoundError') {
+    if (err && err.name === 'NotAllowedError') {
+      camMessageText.textContent = 'Camera access was denied. Go to your browser settings → Site settings → Camera, allow access for this site, then reload the page.';
+    } else if (err && err.name === 'NotFoundError') {
       camMessageText.textContent = 'No camera found on this device.';
-    } else if (err.name === 'NotReadableError') {
+    } else if (err && err.name === 'NotReadableError') {
       camMessageText.textContent = 'Camera is already in use by another app. Close other apps using the camera and try again.';
+    } else if (err && err.name === 'OverconstrainedError') {
+      camMessageText.textContent = 'Your camera does not support the requested settings. Trying basic mode — tap Enable Camera again.';
     } else {
-      camMessageText.textContent = 'Could not access camera: ' + err.message;
+      camMessageText.textContent = 'Could not access camera' + (err && err.message ? (': ' + err.message) : '') + '. If using Chrome on iPhone, try Safari instead.';
     }
   }
 }
@@ -684,7 +697,24 @@ function generateQR() {
 /* ── INIT ── */
 tryLoadLogo();
 generateQR();
-startCamera();
+
+// Detect iOS Chrome (CriOS) and show a hint suggesting Safari,
+// since iOS Chrome has historically had unreliable getUserMedia support.
+(function() {
+  const ua = navigator.userAgent;
+  const isIOSDevice = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isChrome = /CriOS/.test(ua);
+  if (isIOSDevice && isChrome) {
+    const hint = document.getElementById('iosHint');
+    if (hint) hint.style.display = 'block';
+  }
+})();
+
+// NOTE: Camera is intentionally NOT auto-started.
+// iOS (Safari & Chrome) requires getUserMedia to be triggered
+// by a direct user tap/click — auto-starting on page load
+// can silently fail or get stuck on iOS. The "Enable Camera"
+// button above is the required entry point.
 </script>
 </body>
 </html>

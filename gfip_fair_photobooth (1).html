@@ -550,10 +550,15 @@ function capturePhoto() {
 
   const ctx = canvas.getContext('2d');
 
-  // Note: we do NOT mirror-flip here. The live preview is mirrored
-  // via CSS purely so it feels natural to the user (like a mirror),
-  // but the actual saved/downloaded photo should match reality
-  // (text readable correctly, not reversed).
+  // iOS front-camera streams can be reported to <canvas> rotated 180°
+  // relative to how <video> displays them (sensor orientation quirk).
+  // Apply a full 180° rotation correction for the front camera so the
+  // saved image matches what the user sees in the live preview
+  // (right-side up, and not mirrored).
+  if (currentFacingMode === 'user') {
+    ctx.translate(W, H);
+    ctx.rotate(Math.PI);
+  }
   ctx.drawImage(video, 0, 0, W, H);
 
   drawFrameOnCanvas(ctx, W, H);

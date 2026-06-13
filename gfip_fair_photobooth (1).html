@@ -394,6 +394,9 @@ body {
   <button class="action-btn btn-secondary hidden" id="retakeBtn" onclick="retakePhoto()">
     <i class="ti ti-refresh" aria-hidden="true"></i> Retake
   </button>
+  <button class="action-btn btn-secondary hidden" id="rotateBtn" onclick="rotatePhoto()">
+    <i class="ti ti-rotate-2" aria-hidden="true"></i> Rotate
+  </button>
   <button class="action-btn btn-download hidden" id="downloadBtn" onclick="downloadPhoto()">
     <i class="ti ti-download" aria-hidden="true"></i> Download
   </button>
@@ -556,12 +559,10 @@ function capturePhoto() {
     return;
   }
 
-  // Confirmed correct via on-device testing: Flip X (mirror).
-  ctx.save();
-  ctx.translate(W, 0);
-  ctx.scale(-1, 1);
+  // Orientation varies by device/session in unpredictable ways on iOS.
+  // Capture with no transform by default; a manual "Rotate" button
+  // lets the user fix orientation per-photo if needed.
   ctx.drawImage(video, 0, 0, W, H);
-  ctx.restore();
 
   drawFrameOnCanvas(ctx, W, H);
 
@@ -576,6 +577,7 @@ function capturePhoto() {
   document.getElementById('captureBtn').classList.add('hidden');
   document.getElementById('switchCamBtn').classList.add('hidden');
   document.getElementById('retakeBtn').classList.remove('hidden');
+  document.getElementById('rotateBtn').classList.remove('hidden');
   document.getElementById('downloadBtn').classList.remove('hidden');
 }
 
@@ -676,6 +678,7 @@ function retakePhoto() {
   document.getElementById('captureBtn').disabled = false;
   document.getElementById('switchCamBtn').classList.remove('hidden');
   document.getElementById('retakeBtn').classList.add('hidden');
+  document.getElementById('rotateBtn').classList.add('hidden');
   document.getElementById('downloadBtn').classList.add('hidden');
   lastCapturedDataUrl = null;
 
@@ -683,6 +686,34 @@ function retakePhoto() {
   const canvas = document.getElementById('photoCanvas');
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+/* ── ROTATE 180° ──
+   Rotates the already-captured photo (including the frame) by 180°.
+   Useful when the camera orientation comes out upside-down. */
+function rotatePhoto() {
+  const canvas = document.getElementById('photoCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // Copy current canvas content
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = W;
+  tempCanvas.height = H;
+  tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
+
+  // Rotate 180° back onto the main canvas
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(W, H);
+  ctx.rotate(Math.PI);
+  ctx.drawImage(tempCanvas, 0, 0, W, H);
+  ctx.restore();
+
+  // Update preview + stored data URL
+  lastCapturedDataUrl = canvas.toDataURL('image/png');
+  document.getElementById('capturedImg').src = lastCapturedDataUrl;
 }
 
 /* ── DOWNLOAD ── */
